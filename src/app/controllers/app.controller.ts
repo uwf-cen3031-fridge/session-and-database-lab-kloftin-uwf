@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express";
 import { pino } from 'pino';
+import { UserService } from "../services/user.service";
 
 export class AppController {
   public router: Router = Router();
@@ -11,11 +12,41 @@ export class AppController {
 
   private initializeRouter() {
 
+    this.router.get("/login", (req: Request, res: Response) => {
+      res.render("login");
+    });
+
+    this.router.post("/login", (req: any, res: Response) => {
+      req.session.user = req.body.username;
+      res.redirect("/");
+    });
+
+    this.router.get("/logout", (req: any, res: Response) => {
+      req.session.destroy(() => {
+        res.redirect("/");
+      });
+    });
+
+    // PROTECT THE HOMEPAGE
+
+    const enforceLogin = (req: any, res: Response, next: any) => {
+      if (req.session.user) {
+        next();
+      } else {
+        res.redirect("/login");
+      }
+    };
+
+    // Security middleware
+    this.router.use(enforceLogin);
+    
     // Serve the home page
-    this.router.get("/", (req: Request, res: Response) => {
+    this.router.get("/", (req: any, res: Response) => {
       try {
         // Render the "home" template as HTML
-        res.render("home");
+        res.render("home", {
+          user: req.session.user
+        });
       } catch (err) {
         this.log.error(err);
       }
